@@ -1,0 +1,37 @@
+[
+  {
+    "from": "NDLS",
+    "to": "MMCT",
+    "label": "New Delhi to Mumbai"
+  },
+  {
+    "from": "CSMT",
+    "to": "NDLS",
+    "label": "Mumbai to New Delhi"
+  },
+  {
+    "from": "NDLS",
+    "to": "MAS",
+    "label": "New Delhi to Chennai"
+  },
+  {
+    "from": "MAS",
+    "to": "NDLS",
+    "label": "Chennai to New Delhi"
+  },
+  {
+    "from": "NDLS",
+    "to": "HWH",
+    "label": "New Delhi to Howrah"
+  },
+  {
+    "from": "TN",
+    "to": "MS",
+    "label": "Tuticorin to Chennai"
+  },
+  {
+    "from": "CSMT",
+    "to": "PUNE",
+    "label": "Mumbai to Pune"
+  }
+]
