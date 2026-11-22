@@ -2354,6 +2354,7 @@ async function renderLive(params){
 
 const PNR_API_URL = "https://rail-check-train-track.pavankumarksv.workers.dev/pnr";
 
+
 async function renderPNR(params) {
   app.innerHTML = `
     <div class="page">
@@ -2419,9 +2420,9 @@ async function renderPNR(params) {
         body: JSON.stringify({ pnr })
       });
 
-      const data = await response.json();
+      const responseData = await response.json();
 
-      if (data.errorcode === "712") {
+      if (responseData.errorcode === "712") {
         result.innerHTML = `
           <div class="error-box show">
             Incorrect PNR Number
@@ -2429,19 +2430,98 @@ async function renderPNR(params) {
         return;
       }
 
-      if (!response.ok || !data.pnrNo || !data.passengers) {
-        throw new Error('Invalid API response');
+      const p = responseData?.data?.pnrResponse;
+
+      if (
+        !response.ok ||
+        !p ||
+        p.errorCode !== 0 ||
+        !Array.isArray(p.passengerStatus)
+      ) {
+        throw new Error(
+          p?.error || responseData.error || 'Invalid API response'
+        );
       }
 
-const date = value => {
-  if (!value) return '—';
-  const d = new Date(value);
-  return isNaN(d) ? safe(value) : d.toLocaleString('en-IN', {
-    dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kolkata'
-  });
-};
+      const safe = value =>
+        escapeHTML(
+          value === null || value === undefined || value === ''
+            ? '—'
+            : String(value)
+        );
 
-      const safe = value => escapeHTML(String(value || '—'));
+      // Convert ConfirmTkt date and time into readable format
+      const date = (journeyDate, time) => {
+        if (!journeyDate) return '—';
+
+        const parts = journeyDate.split('-');
+
+        if (parts.length !== 3) {
+          return safe(journeyDate);
+        }
+
+        const months = [
+          'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+          'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+        ];
+
+        const day = parts[0];
+        const month = Number(parts[1]) - 1;
+        const year = parts[2];
+
+        if (month < 0 || month > 11) {
+          return safe(journeyDate);
+        }
+
+        return `${day} ${months[month]} ${year}${time ? ', ' + safe(time) : ''}`;
+      };
+
+      // Map ConfirmTkt response to the existing display fields
+      const data = {
+        pnrNo: p.pnr,
+        overallStatus: p.passengerStatus
+          .map(x => x.currentStatus)
+          .filter(Boolean)
+          .join(', '),
+
+        trainName: p.trainName,
+        trainNumber: p.trainNo,
+        journeyClassName: p.class,
+
+        srcName: p.sourceName,
+        srcCode: p.from,
+
+        dstName: p.destinationName,
+        dstCode: p.to,
+
+        departureTime: date(p.sourceDoj, p.departureTime),
+        arrivalTime: date(p.destinationDoj, p.arrivalTime),
+
+        chartStatus: p.chartPrepared
+          ? 'Prepared'
+          : 'Not Prepared',
+
+        pnrLastUpdated: p.cacheTime
+          ? new Date(p.cacheTime).toLocaleString('en-IN', {
+              dateStyle: 'medium',
+              timeStyle: 'short',
+              timeZone: 'Asia/Kolkata'
+            })
+          : '—',
+
+        passengers: p.passengerStatus.map(x => ({
+          name: `Passenger ${x.number}`,
+          currentStatus: x.currentStatus,
+          currentSeatDetails: [
+            x.currentCoachId || x.coach,
+            x.currentBerthNo || x.berth
+          ].filter(Boolean).join(' '),
+          berthType: x.currentBerthCode
+        })),
+
+        noteOrCoachPos: p.trainStatus || p.informationMessage,
+        disclaimerMsg: p.informationMessage
+      };
 
       result.innerHTML = `
         <div class="section-gap">
@@ -2452,38 +2532,47 @@ const date = value => {
               <span class="k">PNR Number</span>
               <span class="v">${safe(data.pnrNo)}</span>
             </div>
+
             <div class="info-item">
               <span class="k">Reservation Status</span>
               <span class="v accent">${safe(data.overallStatus)}</span>
             </div>
+
             <div class="info-item">
               <span class="k">Train</span>
               <span class="v">${safe(data.trainName)} (${safe(data.trainNumber)})</span>
             </div>
+
             <div class="info-item">
               <span class="k">Journey Class</span>
               <span class="v">${safe(data.journeyClassName)}</span>
             </div>
+
             <div class="info-item">
               <span class="k">From</span>
               <span class="v">${safe(data.srcName)} (${safe(data.srcCode)})</span>
             </div>
+
             <div class="info-item">
               <span class="k">To</span>
               <span class="v">${safe(data.dstName)} (${safe(data.dstCode)})</span>
             </div>
+
             <div class="info-item">
               <span class="k">Departure</span>
-              <span class="v">${date(data.departureTime)}</span>
+              <span class="v">${safe(data.departureTime)}</span>
             </div>
+
             <div class="info-item">
               <span class="k">Arrival</span>
-              <span class="v">${date(data.arrivalTime)}</span>
+              <span class="v">${safe(data.arrivalTime)}</span>
             </div>
+
             <div class="info-item">
               <span class="k">Chart Status</span>
               <span class="v">${safe(data.chartStatus)}</span>
             </div>
+
             <div class="info-item">
               <span class="k">Last Updated</span>
               <span class="v">${safe(data.pnrLastUpdated)}</span>
@@ -2500,14 +2589,17 @@ const date = value => {
                 <span class="k">Passenger</span>
                 <span class="v">${safe(p.name || `Passenger ${i + 1}`)}</span>
               </div>
+
               <div class="info-item">
                 <span class="k">Current Status</span>
                 <span class="v accent">${safe(p.currentStatus)}</span>
               </div>
+
               <div class="info-item">
                 <span class="k">Seat Details</span>
                 <span class="v">${safe(p.currentSeatDetails)}</span>
               </div>
+
               <div class="info-item">
                 <span class="k">Berth Type</span>
                 <span class="v">${safe(p.berthType)}</span>
@@ -2526,9 +2618,11 @@ const date = value => {
       `;
 
     } catch (error) {
+      console.error('PNR Error:', error);
+
       result.innerHTML = `
         <div class="error-box show">
-          Something went wrong. Please try again later.
+          ${escapeHTML(error.message || 'Something went wrong. Please try again later.')}
         </div>`;
     } finally {
       button.disabled = false;
