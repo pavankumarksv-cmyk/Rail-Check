@@ -2101,43 +2101,254 @@ async function renderReservation(params){
 /* =========================================================
    LIVE STATUS (#/live)
    ========================================================= */
+
 async function renderLive(params){
   app.innerHTML = `
     <div class="page">
-      <div style="margin-bottom:14px"><a class="btn-ghost" href="#/home">← Back to Home</a></div>
+      <div style="margin-bottom:14px">
+        <a class="btn-ghost" href="#/home">← Back to Home</a>
+      </div>
+
       <div class="hero" style="padding:8px 0 16px">
         <h1>Live Train <span class="accent">Status</span></h1>
-        <p>Track any train's real-time running status — current location, delays and platform info.</p>
+        <p>Track any train's real-time running status — current location, delays and station details.</p>
       </div>
 
       <div class="card live-card">
         <div class="card-title">Track a train</div>
+
         <div class="field">
           <label for="lv-tn">Train number <span class="req">*</span></label>
-          <input id="lv-tn" class="input" type="text" inputmode="numeric" placeholder="e.g. 12694" value="${params.tn?escapeHTML(params.tn):''}" />
+          <input id="lv-tn" class="input" type="text"
+            inputmode="numeric"
+            placeholder="e.g. 12694"
+            value="${params.tn ? escapeHTML(params.tn) : ''}" />
         </div>
+
         <div class="form-actions" style="margin-top:12px">
-          <button class="btn-primary" id="lv-track" type="button" style="width:auto;min-width:200px">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/></svg>
+          <button class="btn-primary" id="lv-track" type="button"
+            style="width:auto;min-width:200px">
             Track Train Live
           </button>
         </div>
-        <div class="external-note">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
-          Live status provided through external ConfirmTkt service. Opens in a new tab.
-        </div>
       </div>
+
+      <div id="lv-results" class="section-gap"></div>
     </div>
   `;
-  document.getElementById('lv-track').addEventListener('click', ()=>{
-    const tn = document.getElementById('lv-tn').value.trim();
-    if(!/^\d{3,6}$/.test(tn)){ alert('Please enter a valid train number (3-6 digits).'); return; }
-    window.open(`https://www.confirmtkt.com/train-running-status/${encodeURIComponent(tn)}`, '_blank', 'noopener,noreferrer');
+
+  const input = document.getElementById('lv-tn');
+  const button = document.getElementById('lv-track');
+  const results = document.getElementById('lv-results');
+
+  async function trackTrain(){
+
+    const tn = input.value.trim();
+
+    if(!/^\d{5}$/.test(tn)){
+      alert('Please enter a valid 5-digit train number.');
+      return;
+    }
+
+    button.disabled = true;
+    button.innerHTML = '<span class="spinner"></span> Fetching Status...';
+
+    results.innerHTML = `
+      <div class="card loading-state">
+        <span class="spinner"></span> Fetching live train status...
+      </div>
+    `;
+
+    try{
+
+      const response = await fetch(
+        `https://rail-check-train-track.pavankumarksv.workers.dev/?train=${encodeURIComponent(tn)}`
+      );
+
+      if(!response.ok){
+        throw new Error(`API request failed (${response.status})`);
+      }
+
+      const data = await response.json();
+
+      if(!data.success){
+        throw new Error(data.error || 'Unable to fetch train status.');
+      }
+
+      const status = (data.currentStatus || '').toLowerCase();
+
+      let statusLabel = 'TRAIN RUNNING';
+      let statusColor = 'var(--primary)';
+
+      if(status.includes('reached final destination')){
+        statusLabel = 'JOURNEY COMPLETED';
+        statusColor = '#22c55e';
+      }
+      else if(status.includes('yet to start')){
+        statusLabel = 'YET TO START';
+        statusColor = 'var(--warn)';
+      }
+
+      const previous = data.previousStation;
+      const next = data.nextStation;
+
+      function stationCard(label, station){
+        if(!station) return '';
+
+        return `
+          <div class="info-item">
+            <div class="k">${label}</div>
+            <div class="v">${escapeHTML(station.stationName)}</div>
+            <div class="hint">
+              Arrival: ${escapeHTML(station.arrival || '—')}
+              <br>
+              Departure: ${escapeHTML(station.departure || '—')}
+              <br>
+              ${escapeHTML(station.delay || '—')}
+            </div>
+          </div>
+        `;
+      }
+
+      const currentStation = data.currentStation || 'Unknown';
+
+      const stationHTML = (data.stations || []).map((station, index) => {
+
+        const isCurrent = station.status === 'current';
+        const isPassed = station.status === 'passed';
+
+        return `
+          <div class="stop-row">
+            <div class="stop-dot-col">
+              <div class="stop-dot ${isCurrent ? 'origin' : ''}"></div>
+              <div class="stop-line"></div>
+            </div>
+
+            <div class="stop-main">
+              <div class="stop-name">
+                ${escapeHTML(station.stationName)}
+                ${isCurrent ? '<span style="color:var(--primary)"> (CURRENT)</span>' : ''}
+              </div>
+
+              <div class="stop-times">
+                <span class="stop-time">
+                  Arrival: <b>${escapeHTML(station.arrival || '—')}</b>
+                </span>
+                <span class="stop-time">
+                  Departure: <b>${escapeHTML(station.departure || '—')}</b>
+                </span>
+              </div>
+
+              <div class="hint">
+                ${escapeHTML(station.delay || '—')}
+              </div>
+            </div>
+
+            <div class="stop-side">
+              <span class="badge" style="
+                background:${isCurrent ? 'var(--primary)' : isPassed ? '#15803d' : '#475569'};
+                color:${isCurrent ? '#111' : '#fff'};
+              ">
+                ${escapeHTML(station.status)}
+              </span>
+              <span class="day">
+                ${station.date ? escapeHTML(station.date) : ''}
+                ${station.day ? ' · Day ' + station.day : ''}
+              </span>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      results.innerHTML = `
+        <div class="card">
+
+          <div class="card-title">Train Information</div>
+
+          <div class="td-title">
+            <span class="td-name">${escapeHTML(data.trainName || 'Unknown Train')}</span>
+            <span class="td-num">${escapeHTML(data.trainNumber)}</span>
+          </div>
+
+          <div style="
+            color:${statusColor};
+            font-weight:700;
+            font-size:14px;
+            margin:12px 0;
+          ">
+            ${escapeHTML(statusLabel)}
+          </div>
+
+          <div class="note-box">
+            ${escapeHTML(data.currentStatus || 'Status unavailable')}
+          </div>
+
+          <div class="card-title" style="margin-top:20px">
+            Station Information
+          </div>
+
+          <div class="info-grid">
+            ${stationCard('Previous Station', previous)}
+
+            <div class="info-item">
+              <div class="k">Current Station</div>
+              <div class="v accent">${escapeHTML(currentStation)}</div>
+            </div>
+
+            ${stationCard('Next Station', next)}
+          </div>
+
+          <div class="info-grid" style="margin-top:12px">
+            <div class="info-item">
+              <div class="k">Total Stations</div>
+              <div class="v accent">${Number(data.stationCount) || 0}</div>
+            </div>
+          </div>
+
+          <div class="card-title" style="margin-top:24px">
+            Complete Route Status
+          </div>
+
+          <div class="route-timeline">
+            ${stationHTML || '<div class="empty-state">Station information unavailable.</div>'}
+          </div>
+
+          <div class="hint" style="margin-top:16px">
+            Live running status provided by RailCheck API.
+          </div>
+
+        </div>
+      `;
+
+    }catch(error){
+
+      results.innerHTML = `
+        <div class="card">
+          <div class="error-box show">
+            ${escapeHTML(error.message || 'Unable to fetch train status.')}
+          </div>
+        </div>
+      `;
+
+    }finally{
+
+      button.disabled = false;
+      button.textContent = 'Track Train Live';
+
+    }
+  }
+
+  button.addEventListener('click', trackTrain);
+
+  input.addEventListener('keydown', e=>{
+    if(e.key === 'Enter') trackTrain();
   });
-  document.getElementById('lv-tn').addEventListener('keydown', e=>{
-    if(e.key === 'Enter') document.getElementById('lv-track').click();
-  });
+
+  if(params.tn){
+    trackTrain();
+  }
 }
+
 
 /* ---------- NAV BUTTONS ---------- */
 document.querySelectorAll('.nav button[data-route]').forEach(b=>{
