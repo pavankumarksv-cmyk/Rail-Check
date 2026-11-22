@@ -2433,12 +2433,13 @@ async function renderPNR(params) {
         throw new Error('Invalid API response');
       }
 
-      const date = value =>
-        value ? new Date(value).toLocaleString('en-IN', {
-          dateStyle: 'medium',
-          timeStyle: 'short',
-          timeZone: 'Asia/Kolkata'
-        }) : '—';
+const date = value => {
+  if (!value) return '—';
+  const d = new Date(value);
+  return isNaN(d) ? safe(value) : d.toLocaleString('en-IN', {
+    dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kolkata'
+  });
+};
 
       const safe = value => escapeHTML(String(value || '—'));
 
