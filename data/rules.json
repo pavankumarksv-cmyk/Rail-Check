@@ -1,0 +1,25 @@
+{
+  "advance_reservation_period_days": 60,
+  "advance_reservation_opening_time": "08:00",
+  "tatkal": {
+    "ac_classes_opening_time": "10:00",
+    "non_ac_classes_opening_time": "11:00",
+    "ac_classes": [
+      "1A",
+      "2A",
+      "3A",
+      "CC",
+      "EC",
+      "3E"
+    ],
+    "non_ac_classes": [
+      "SL",
+      "2S",
+      "GS"
+    ]
+  },
+  "irctc_urls": {
+    "train_search": "https://www.irctc.co.in/nget/train-search"
+  },
+  "timezone": "Asia/Kolkata"
+}

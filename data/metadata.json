@@ -1,0 +1,11 @@
+{
+  "data_version": "1.0.0",
+  "generated_at": "2026-10-08",
+  "source": "NTES crawl",
+  "counts": {
+    "trains": 10596,
+    "stations": 8587,
+    "train_stops": 216028,
+    "route_files": 10596
+  }
+}
