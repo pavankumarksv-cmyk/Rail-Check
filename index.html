@@ -2166,7 +2166,7 @@ async function renderLive(params){
       );
 
       if(!response.ok){
-        throw new Error(`API request failed (${response.status})`);
+        throw new Error(`Unable to fetch train status. There is some error at our side, Please try again later.`);
       }
 
       const data = await response.json();
