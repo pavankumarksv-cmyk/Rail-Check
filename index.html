@@ -2248,21 +2248,10 @@ async function searchTrainSuggestions(query) {
         return;
       }
 
-      liveTrainSuggestions = trains.map(train => ({
-        number: String(
-          train.trainNumber ??
-          train.trainNo ??
-          train.train_no ??
-          train.train_number ??
-          train.number ??
-          ''
-        ),
-        name:
-          train.trainName ??
-          train.train_name ??
-          train.name ??
-          'Unknown Train'
-      })).filter(train => train.number && train.number !== 'undefined');
+liveTrainSuggestions = trains.map(train => ({
+  number: String(train.Key),
+  name: train.Value
+})).filter(train => train.number && train.number !== 'undefined');
 
       if (!liveTrainSuggestions.length) {
         closeTrainSuggestions();
