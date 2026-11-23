@@ -782,7 +782,20 @@ function todayISO(){
   const d = new Date();
   return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
 }
-
+function tomorrowISO() {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+}
+function minLvISO() {
+  const d = new Date();
+  d.setDate(d.getDate() - 3);
+  return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+}
+function monthName(num) {
+  const names = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return names[num - 1];
+}
 // Add days to an ISO date using UTC math (no TZ shift)
 function addDaysISO(iso, days){
   if(!iso) return iso;
@@ -2125,6 +2138,8 @@ async function renderLive(params){
             inputmode="numeric"
             placeholder="e.g. 12694"
             value="${params.tn ? escapeHTML(params.tn) : ''}" />
+               <label for="dateInput-lv">Journey date <span class="req">*</span></label>
+               <input id="dateInput-lv" class="date-input" type="date" aria-label="Journey date" value="${todayISO()}" min="${minLvISO()}" max="${tommorowISO()}" />
         </div>
 
         <div class="form-actions" style="margin-top:12px">
@@ -2140,12 +2155,18 @@ async function renderLive(params){
   `;
 
   const input = document.getElementById('lv-tn');
+  const inputDate = document.getElementById('dateInput-lv');
   const button = document.getElementById('lv-track');
   const results = document.getElementById('lv-results');
 
   async function trackTrain(){
 
     const tn = input.value.trim();
+    const tnDate = inputDate.value.trim();
+    const [y, m, d] = tnDate.split('-');
+    const tnMntNo = parseInt(m);
+    const tnMntName = monthName(tnMntNo);
+    const tnDateCnf = `${d}-${tnMntName}-${y}`;
 
     if(!/^\d{5}$/.test(tn)){
       alert('Please enter a valid 5-digit train number.');
@@ -2164,7 +2185,7 @@ async function renderLive(params){
     try{
 
       const response = await fetch(
-        `https://rail-check-train-track.pavankumarksv.workers.dev/?train=${encodeURIComponent(tn)}`
+        `https://rail-check-train-track.pavankumarksv.workers.dev/?train=${encodeURIComponent(tn)}&Date=${encodeURIComponent(tnDateCnf)}`
       );
 
       if(!response.ok){
@@ -2220,13 +2241,6 @@ async function renderLive(params){
         const isPassed = station.status === 'passed';
 
         return `
-      <div class="card live-card">
-
-        <div class="field">
-            <label for="dateInput-lv">Journey date <span class="req">*</span></label>
-            <input id="dateInput-lv" class="date-input" type="date" aria-label="Journey date" min="${todayISO()}" />
-        </div>
-      </div>
           <div class="stop-row">
             <div class="stop-dot-col">
               <div class="stop-dot ${isCurrent ? 'origin' : ''}"></div>
