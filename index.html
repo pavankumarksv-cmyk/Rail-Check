@@ -2367,15 +2367,30 @@ if (selectedStation) {
 
 const response = await fetch(apiURL);
 
-      if(!response.ok){
-        throw new Error(`Unable to fetch train status. There is some error at our side, Please try again later.`);
-      }
+let data = {};
 
-      const data = await response.json();
-      
-      if(!data.success){
-        throw new Error(data.error || 'Unable to fetch train status.');
-      }
+try {
+  data = await response.json();
+} catch (error) {
+  data = {};
+}
+
+if (!response.ok) {
+
+  if (data.upstreamStatus === 404) {
+    throw new Error(
+      'Train number may be incorrect or unavailable. Please check the train number and try again.'
+    );
+  }
+
+  throw new Error(
+    'Unable to fetch train status. There is some error at our side. Please try again later.'
+  );
+}
+
+if (!data.success) {
+  throw new Error(data.error || 'Unable to fetch train status.');
+}
       
       // Populate station dropdown from API
       if (data.stationSelectList) {
@@ -2384,19 +2399,43 @@ const response = await fetch(apiURL);
       
       lastLoadedTrain = tn;
 
-      const status = (data.currentStatus || '').toLowerCase();
+const hasLiveStatus =
+  typeof data.currentStatus === 'string' &&
+  data.currentStatus.trim() !== '';
 
-      let statusLabel = 'TRAIN RUNNING';
-      let statusColor = 'var(--primary)';
+const status = hasLiveStatus
+  ? data.currentStatus.toLowerCase()
+  : '';
 
-      if(status.includes('reached final destination')){
-        statusLabel = 'JOURNEY COMPLETED';
-        statusColor = '#22c55e';
-      }
-      else if(status.includes('yet to start')){
-        statusLabel = 'YET TO START';
-        statusColor = 'var(--warn)';
-      }
+let statusLabel = hasLiveStatus
+  ? 'TRAIN RUNNING'
+  : 'LIVE STATUS UNAVAILABLE';
+
+let statusColor = hasLiveStatus
+  ? 'var(--primary)'
+  : 'var(--warn)';
+
+if (status.includes('reached final destination')) {
+  statusLabel = 'JOURNEY COMPLETED';
+  statusColor = '#22c55e';
+}
+else if (status.includes('yet to start')) {
+  statusLabel = 'YET TO START';
+  statusColor = 'var(--warn)';
+}
+
+const statusMessage = hasLiveStatus
+  ? data.currentStatus
+  : 'The train may not be running on the selected date, or live status is unavailable. Please check directly with IRCTC. If you think this is a RailCheck issue, please try again later.';
+
+      // if(status.includes('reached final destination')){
+      //   statusLabel = 'JOURNEY COMPLETED';
+      //   statusColor = '#22c55e';
+      // }
+      // else if(status.includes('yet to start')){
+      //   statusLabel = 'YET TO START';
+      //   statusColor = 'var(--warn)';
+      // }
 
       const previous = data.previousStation;
       const next = data.nextStation;
@@ -2488,9 +2527,9 @@ const response = await fetch(apiURL);
             ${escapeHTML(statusLabel)}
           </div>
 
-          <div class="note-box">
-            ${escapeHTML(data.currentStatus || 'Status unavailable')}
-          </div>
+<div class="note-box">
+  ${escapeHTML(statusMessage)}
+</div>
 
           <div class="card-title" style="margin-top:20px">
             Station Information
