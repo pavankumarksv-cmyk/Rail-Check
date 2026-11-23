@@ -2219,19 +2219,37 @@ function populateStations(stationList) {
 
     try{
 
-      const response = await fetch(
-        `https://rail-check-train-track.pavankumarksv.workers.dev/?train=${encodeURIComponent(tn)}&Date=${encodeURIComponent(tnDateCnf)}`
-      );
+const apiURL = new URL(
+  'https://rail-check-train-track.pavankumarksv.workers.dev/'
+);
+
+apiURL.searchParams.set('train', tn);
+apiURL.searchParams.set('Date', tnDateCnf);
+
+const selectedStation = stationInput.value;
+
+if (selectedStation) {
+  apiURL.searchParams.set('stn', selectedStation);
+}
+
+const response = await fetch(apiURL);
 
       if(!response.ok){
         throw new Error(`Unable to fetch train status. There is some error at our side, Please try again later.`);
       }
 
       const data = await response.json();
-
+      
       if(!data.success){
         throw new Error(data.error || 'Unable to fetch train status.');
       }
+      
+      // Populate station dropdown from API
+      if (data.stationSelectList) {
+        populateStations(data.stationSelectList);
+      }
+      
+      lastLoadedTrain = tn;
 
       const status = (data.currentStatus || '').toLowerCase();
 
@@ -2395,7 +2413,18 @@ function populateStations(stationList) {
 
     }
   }
+   input.addEventListener('input', () => {
 
+  if (input.value.trim() !== lastLoadedTrain) {
+
+    resetStation();
+
+    results.innerHTML = '';
+
+    lastLoadedTrain = '';
+  }
+
+});
   button.addEventListener('click', trackTrain);
 
   input.addEventListener('keydown', e=>{
