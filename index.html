@@ -2409,7 +2409,7 @@ const status = hasLiveStatus
 
 let statusLabel = hasLiveStatus
   ? 'TRAIN RUNNING'
-  : 'LIVE STATUS UNAVAILABLE';
+  : 'TRAIN NOT RUNNING / LIVE STATUS UNAVAILABLE';
 
 let statusColor = hasLiveStatus
   ? 'var(--primary)'
@@ -2426,7 +2426,7 @@ else if (status.includes('yet to start')) {
 
 const statusMessage = hasLiveStatus
   ? data.currentStatus
-  : 'The train may not be running on the selected date, or live status is unavailable. Please check directly with IRCTC. If you think this is a RailCheck issue, please try again later.';
+  : 'The train may not be running on the selected date/station, or live status is unavailable. Please check directly with IRCTC. If you think this is a RailCheck issue, please try again later.';
 
       // if(status.includes('reached final destination')){
       //   statusLabel = 'JOURNEY COMPLETED';
