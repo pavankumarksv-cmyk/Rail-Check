@@ -2135,16 +2135,6 @@ async function renderLive(params){
         </div>
       </div>
 
-/* journey date */
-      <div class="card live-card">
-
-        <div class="field">
-            <label for="dateInput-lv">Journey date <span class="req">*</span></label>
-            <input id="dateInput-lv" class="date-input" type="date" aria-label="Journey date" min="${todayISO()}" />
-        </div>
-      </div>
-// Journey date end
-
       <div id="lv-results" class="section-gap"></div>
     </div>
   `;
@@ -2230,6 +2220,13 @@ async function renderLive(params){
         const isPassed = station.status === 'passed';
 
         return `
+      <div class="card live-card">
+
+        <div class="field">
+            <label for="dateInput-lv">Journey date <span class="req">*</span></label>
+            <input id="dateInput-lv" class="date-input" type="date" aria-label="Journey date" min="${todayISO()}" />
+        </div>
+      </div>
           <div class="stop-row">
             <div class="stop-dot-col">
               <div class="stop-dot ${isCurrent ? 'origin' : ''}"></div>
