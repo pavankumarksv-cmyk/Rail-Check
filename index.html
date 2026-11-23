@@ -2336,7 +2336,7 @@ function populateStations(stationList) {
     const tnMntName = monthName(tnMntNo);
     const tnDateCnf = `${d}-${tnMntName}-${y}`;
 
-    if(!/^\d{4}$/.test(tn)){
+    if(!/^\d{4,5}$/.test(tn)){
       alert('Please enter a valid 5-digit train number.');
       return;
     }
