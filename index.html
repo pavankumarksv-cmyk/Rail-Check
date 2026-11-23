@@ -2143,7 +2143,6 @@ async function renderLive(params){
                   <div id="StationDiv-lv" class="hidden">
                     <label for="stationInput-lv">Station</label>
                     <select id="stationInput-lv" class="input" aria-label="Journey station">
-                      <option value="">Select station</option>
                     </select>
                   </div>
         </div>
@@ -2188,6 +2187,7 @@ function populateStations(stationList) {
 
     option.value = station.value;
     option.textContent = station.name;
+    option.selected = station.selected === true;
 
     stationInput.appendChild(option);
   });
