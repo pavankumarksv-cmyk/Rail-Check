@@ -978,6 +978,7 @@ async function route(){
     else if(path === '/reservation') await renderReservation(params);
     else if(path === '/pnr') await renderPNR(params);
     else if(path === '/live') await renderLive(params);
+    else if(path == '/Review') await renderLive(params);
     else await renderHome(params);
   }catch(e){
     app.innerHTML = `<div class="card"><div class="error-box show">Failed to render: ${escapeHTML(e.message)}</div></div>`;
