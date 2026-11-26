@@ -395,6 +395,81 @@ main{
   font-size:18px;font-weight:800;color:var(--primary);
   font-variant-numeric:tabular-nums;letter-spacing:-.01em;
 }
+.train-result-grid{
+  display:grid;
+  grid-template-columns:minmax(180px,1.5fr) minmax(110px,1fr) 35px minmax(110px,1fr) minmax(100px,.8fr);
+  align-items:center;
+  gap:18px;
+  width:100%;
+}
+
+.train-result-name{
+  min-width:0;
+}
+
+.train-result-name .name{
+  font-weight:800;
+  font-size:15px;
+  margin-bottom:6px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.train-result-station{
+  min-width:0;
+}
+
+.train-result-time{
+  color:var(--primary);
+  font-size:18px;
+  font-weight:800;
+  line-height:1.2;
+  margin-bottom:5px;
+}
+
+.train-result-code{
+  color:var(--text-muted);
+  font-size:13px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.train-result-arrow{
+  color:var(--primary);
+  font-size:20px;
+  text-align:center;
+}
+
+.train-result-travel{
+  color:var(--text-muted);
+  font-size:13px;
+  white-space:nowrap;
+  text-align:right;
+}
+
+@media(max-width:760px){
+  .train-result-grid{
+    grid-template-columns:1fr auto 24px auto;
+    gap:10px;
+  }
+
+  .train-result-name{
+    grid-column:1 / -1;
+    margin-bottom:4px;
+  }
+
+  .train-result-travel{
+    grid-column:1 / -1;
+    text-align:left;
+    margin-top:4px;
+  }
+
+  .train-result-time{
+    font-size:16px;
+  }
+}
 .train-info-block .name{font-size:15px;font-weight:600;color:var(--text);margin-bottom:4px}
 .train-info-block .meta{font-size:12px;color:var(--text-muted);display:flex;gap:10px;flex-wrap:wrap}
 .train-info-block .meta .arr{color:var(--primary)}
@@ -1484,10 +1559,11 @@ const filteredTrains = await Promise.all(
       : null;
 
     // Store searched-station timings on train object
-    train._searchDeparture = fromStop?.d || null;
-    train._searchArrival = toStop?.a || null;
-
-    return train;
+    return {
+      ...train,
+      _searchDeparture: fromStop?.d || null,
+      _searchArrival: toStop?.a || null
+};
   })
 );
 
@@ -1537,22 +1613,79 @@ const trains = filteredTrains.filter(Boolean);
       list.innerHTML = `<div class="empty-state">No trains match this filter.</div>`;
       return;
     }
-    list.innerHTML = filtered.map(t => `
-      <button class="train-card" data-tn="${escapeHTML(t.tn)}" type="button">
-        <div class="train-num">${escapeHTML(t.tn)}</div>
-        <div class="train-info-block">
-          <div class="name">${escapeHTML(t.nm)}</div>
-          <div class="meta">
-            <span class="badge badge-${escapeHTML(t.tt)}">${escapeHTML(typeLabel(t.tt))}</span>
-            <span>${escapeHTML(t.sn)} (${escapeHTML(t.s)})</span>
-            <span class="arr">→</span>
-            <span>${escapeHTML(t.dn)} (${escapeHTML(t.d)})</span>
-            <span>Travel ${escapeHTML(t.tt2||'—')}</span>
+    list.innerHTML = filtered.map(t => {
+
+      const departureTime = t._searchDeparture
+        ? format12h(t._searchDeparture)
+        : '—';
+    
+      const arrivalTime = t._searchArrival
+        ? format12h(t._searchArrival)
+        : '—';
+    
+      return `
+        <button class="train-card" data-tn="${escapeHTML(t.tn)}" type="button">
+    
+          <div class="train-num">
+            ${escapeHTML(t.tn)}
           </div>
-        </div>
-        <div class="train-arrow" aria-hidden="true">›</div>
-      </button>
-    `).join('');
+    
+          <div class="train-info-block">
+    
+            <div class="train-result-grid">
+    
+              <!-- TRAIN NAME / TYPE -->
+              <div class="train-result-name">
+                <div class="name">${escapeHTML(t.nm)}</div>
+    
+                <div>
+                  <span class="badge badge-${escapeHTML(t.tt)}">
+                    ${escapeHTML(typeLabel(t.tt))}
+                  </span>
+                </div>
+              </div>
+    
+              <!-- DEPARTURE -->
+              <div class="train-result-station">
+                <div class="train-result-time">
+                  ${escapeHTML(departureTime)}
+                </div>
+    
+                <div class="train-result-code">
+                  ${escapeHTML(from.code)}
+                </div>
+              </div>
+    
+              <!-- ARROW -->
+              <div class="train-result-arrow">
+                →
+              </div>
+    
+              <!-- ARRIVAL -->
+              <div class="train-result-station">
+                <div class="train-result-time">
+                  ${escapeHTML(arrivalTime)}
+                </div>
+    
+                <div class="train-result-code">
+                  ${escapeHTML(to.code)}
+                </div>
+              </div>
+    
+              <!-- TRAVEL TIME -->
+              <div class="train-result-travel">
+                Travel ${escapeHTML(t.tt2 || '—')}
+              </div>
+    
+            </div>
+    
+          </div>
+    
+          <div class="train-arrow" aria-hidden="true">›</div>
+    
+        </button>
+      `;
+    }).join('');
     list.querySelectorAll('.train-card').forEach(c=>{
       c.addEventListener('click', ()=>{
         const tn = c.dataset.tn;
