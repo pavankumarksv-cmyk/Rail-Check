@@ -1433,9 +1433,52 @@ async function renderSearchResults(from, to, date){
   }
   matches.sort((a,b)=> a.fromSeq - b.fromSeq || a.toSeq - b.toSeq);
 
-  // get train objects
-  await loadTrains();
-  const trains = matches.map(m => cache.trainMap.get(m.tn)).filter(Boolean);
+  // get train objects + running days
+await loadTrains();
+const runningDays = await loadRunningDays();
+
+const candidateTrains = matches
+  .map(m => cache.trainMap.get(m.tn))
+  .filter(Boolean);
+
+// Filter trains according to selected journey date.
+// For trains reaching the boarding station on Day 2/Day 3,
+// calculate the train's originating date before checking running days.
+const filteredTrains = await Promise.all(
+  candidateTrains.map(async (train) => {
+
+    const days = runningDays[train.tn] || [];
+
+    // If running-day information is unavailable,
+    // don't hide the train.
+    if (days.length === 0) {
+      return train;
+    }
+
+    let originatingDate = date;
+
+    try {
+      const route = await loadRoute(train.tn);
+
+      if (route) {
+        const dayOffset = getDayOffset(route, from.code);
+
+        if (dayOffset >= 0) {
+          originatingDate = getOriginatingDate(date, dayOffset);
+        }
+      }
+    } catch (e) {
+      // If route loading fails, fall back to selected date.
+      originatingDate = date;
+    }
+
+    const weekday = getWeekdayFromISO(originatingDate);
+
+    return days.includes(weekday) ? train : null;
+  })
+);
+
+const trains = filteredTrains.filter(Boolean);
 
   // default min date as today
   container.innerHTML = `
