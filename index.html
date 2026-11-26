@@ -1448,16 +1448,11 @@ const filteredTrains = await Promise.all(
 
     const days = runningDays[train.tn] || [];
 
-    // If running-day information is unavailable,
-    // don't hide the train.
-    if (days.length === 0) {
-      return train;
-    }
-
+    let route = null;
     let originatingDate = date;
 
     try {
-      const route = await loadRoute(train.tn);
+      route = await loadRoute(train.tn);
 
       if (route) {
         const dayOffset = getDayOffset(route, from.code);
@@ -1467,18 +1462,36 @@ const filteredTrains = await Promise.all(
         }
       }
     } catch (e) {
-      // If route loading fails, fall back to selected date.
-      originatingDate = date;
+      route = null;
     }
 
-    const weekday = getWeekdayFromISO(originatingDate);
+    // Check whether train runs on this journey date
+    if (days.length > 0) {
+      const weekday = getWeekdayFromISO(originatingDate);
 
-    return days.includes(weekday) ? train : null;
+      if (!days.includes(weekday)) {
+        return null;
+      }
+    }
+
+    // Find searched FROM and TO stations in route
+    const fromStop = route
+      ? route.find(stop => stop.c === from.code)
+      : null;
+
+    const toStop = route
+      ? route.find(stop => stop.c === to.code)
+      : null;
+
+    // Store searched-station timings on train object
+    train._searchDeparture = fromStop?.d || null;
+    train._searchArrival = toStop?.a || null;
+
+    return train;
   })
 );
 
 const trains = filteredTrains.filter(Boolean);
-
   // default min date as today
   container.innerHTML = `
     <div class="card">
