@@ -1400,9 +1400,29 @@ async function renderHome(params){
     const from = parseStationInput(fromInput);
     const to = parseStationInput(toInput);
     const date = document.getElementById('dateInput').value;
-    if(!from){ fromInput.focus(); return; }
-    if(!to){ toInput.focus(); return; }
-    if(!date){ document.getElementById('dateInput').focus(); return; }
+    
+    if(!from){ 
+      fromInput.focus(); 
+      return; 
+    }
+    
+    if(!to){ 
+      toInput.focus(); 
+      return; 
+    }
+    
+    // Prevent searching between the same station
+    if(from.code === to.code){
+      alert('From and To stations cannot be the same.');
+      toInput.focus();
+      return;
+    }
+    
+    if(!date){ 
+      document.getElementById('dateInput').focus(); 
+      return; 
+    }
+    
     // save trip
     saveTrip({ from: from.code, to: to.code, date, fromName: from.name, toName: to.name, ts: Date.now() });
     renderSavedList();
